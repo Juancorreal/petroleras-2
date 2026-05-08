@@ -1,0 +1,632 @@
+# Importa la librería yfinance para descargar datos financieros desde Yahoo Finance
+import yfinance as yf
+# Importa pandas para manipular tablas y DataFrames
+import pandas as pd
+# Importa numpy para operaciones numéricas y matemáticas
+import numpy as np
+# Importa matplotlib para crear gráficas
+import matplotlib.pyplot as plt
+# Importa el modelo Random Forest para predicción
+from sklearn.ensemble import RandomForestRegressor
+# Importa la función para dividir datos en entrenamiento y prueba
+from sklearn.model_selection import train_test_split
+# Importa métricas para evaluar el modelo
+from sklearn.metrics import mean_absolute_error, r2_score
+# Imprime mensaje indicando que las librerías cargaron correctamente
+print("Librerías cargadas correctamente")
+# Diccionario con tickers y nombres de empresas del sector petrolero
+EMPRESAS_SECTOR = {
+
+    # Occidental Petroleum
+    "OXY": "Occidental Petroleum",
+
+    # ExxonMobil
+    "XOM": "ExxonMobil",
+
+    # Chevron
+    "CVX": "Chevron",
+
+    # British Petroleum
+    "BP": "BP",
+
+    # Shell
+    "SHEL": "Shell",
+
+    # ConocoPhillips
+    "COP": "ConocoPhillips",
+
+    # Petrobras
+    "PBR": "Petrobras",
+
+    # Ecopetrol
+    "EC": "Ecopetrol"
+}
+
+# Descarga datos históricos de todas las empresas
+datos = yf.download(
+
+    # Lista de tickers
+    list(EMPRESAS_SECTOR.keys()),
+
+    # Fecha inicial de descarga
+    start="2015-01-01",
+
+    # Oculta barra de progreso
+    progress=False
+)
+
+
+# Selecciona únicamente precios de cierre
+precios = datos["Close"].copy()
+
+
+# Cambia nombres de columnas por nombres reales de empresas
+precios.columns = [
+
+    # Recorre cada ticker y reemplaza por nombre
+    EMPRESAS_SECTOR[t]
+
+    for t in precios.columns
+]
+
+# Elimina filas con valores nulos
+precios = precios.dropna()
+# Imprime últimas filas del DataFrame
+print(precios.tail())
+# Convierte datos diarios a datos anuales
+precios_anual = precios.resample("YE").last()
+# Calcula variación porcentual anual
+rendimiento_anual = precios_anual.pct_change() * 100
+# Elimina valores nulos generados por pct_change
+rendimiento_anual = rendimiento_anual.dropna()
+# Calcula rendimiento promedio de cada empresa
+promedio = rendimiento_anual.mean()
+# Calcula volatilidad usando desviación estándar
+volatilidad = rendimiento_anual.std()
+# Imprime rendimientos promedio
+print("\nRendimiento promedio:")
+print(promedio)
+# Imprime volatilidad
+print("\nVolatilidad:")
+print(volatilidad)
+
+
+# Define clase EmpresaPetrolera
+class EmpresaPetrolera:
+
+
+    # Constructor de la clase
+    def __init__(
+
+        # Referencia al objeto actual
+        self,
+
+        # Nombre empresa
+        nombre,
+
+        # Ticker bursátil
+        ticker,
+
+        # Rendimiento promedio
+        rendimiento_promedio,
+
+        # Volatilidad
+        volatilidad
+    ):
+
+
+        # Guarda nombre en el objeto
+        self.nombre = nombre
+
+
+        # Guarda ticker en el objeto
+        self.ticker = ticker
+
+
+        # Guarda rendimiento promedio
+        self.rendimiento_promedio = rendimiento_promedio
+
+
+        # Guarda volatilidad
+        self.volatilidad = volatilidad
+
+
+    # Método para mostrar resumen financiero
+    def resumen(self):
+
+
+        # Imprime nombre y ticker
+        print(f"\n{self.nombre} ({self.ticker})")
+
+
+        # Imprime rendimiento promedio
+        print(
+
+            f"Rendimiento promedio: "
+
+            f"{self.rendimiento_promedio:.2f}%"
+        )
+
+
+        # Imprime volatilidad
+        print(
+
+            f"Volatilidad: "
+
+            f"{self.volatilidad:.2f}%"
+        )
+
+
+    # Método que indica si la empresa es rentable
+    def es_rentable(self):
+
+
+        # Retorna True si rendimiento es positivo
+        return self.rendimiento_promedio > 0
+
+
+# Crea lista de objetos EmpresaPetrolera
+empresas_objetos = [
+
+    # Crea objeto EmpresaPetrolera
+    EmpresaPetrolera(
+
+        # Nombre empresa
+        nombre,
+
+        # Ticker
+        ticker,
+
+        # Rendimiento promedio correspondiente
+        promedio[nombre],
+
+        # Volatilidad correspondiente
+        volatilidad[nombre]
+    )
+
+    # Recorre diccionario de empresas
+    for ticker, nombre in EMPRESAS_SECTOR.items()
+]
+
+
+# Recorre lista de objetos
+for empresa in empresas_objetos:
+
+
+    # Ejecuta método resumen
+    empresa.resumen()
+
+
+# Crea lista de empresas rentables usando list comprehension
+ganadoras = [
+
+    # Guarda nombre empresa
+    e.nombre
+
+    # Recorre empresas
+    for e in empresas_objetos
+
+    # Filtra empresas rentables
+    if e.es_rentable()
+]
+
+
+# Calcula promedio de volatilidad del sector
+promedio_vol_sector = sum(
+
+    # Obtiene volatilidad de cada empresa
+    e.volatilidad
+
+    # Recorre empresas
+    for e in empresas_objetos
+
+) / len(empresas_objetos)
+
+
+# Crea lista de empresas más riesgosas
+mas_riesgosas = [
+
+    # Guarda nombre empresa
+    e.nombre
+
+    # Recorre empresas
+    for e in empresas_objetos
+
+    # Filtra volatilidad superior al promedio
+    if e.volatilidad > promedio_vol_sector
+]
+
+
+# Imprime empresas rentables
+print("\nEmpresas rentables:")
+print(ganadoras)
+# Imprime empresas más volátiles
+print("\nEmpresas más volátiles:")
+print(mas_riesgosas)
+# Recorre empresas disponibles
+for e in empresas_objetos:
+
+
+    # Imprime información resumida
+    print(
+
+        f"{e.ticker} | "
+
+        f"{e.nombre} | "
+
+        f"Rendimiento: "
+
+        f"{e.rendimiento_promedio:.2f}%"
+    )
+
+
+# Ciclo infinito hasta ingresar ticker válido
+while True:
+
+
+    # Solicita ticker al usuario
+    ticker_input = input(
+
+        "\nIngresa el ticker: "
+
+    ).strip().upper()
+
+
+    # Busca empresa seleccionada
+    empresa_sel = next(
+
+        (
+            # Recorre empresas
+            e for e in empresas_objetos
+
+            # Busca coincidencia ticker
+            if e.ticker == ticker_input
+        ),
+
+        # Retorna None si no encuentra
+        None
+    )
+
+
+    # Verifica si empresa existe
+    if empresa_sel:
+
+
+        # Sale del ciclo
+        break
+
+
+    # Mensaje error
+    print("Ticker inválido")
+
+
+# Ciclo infinito hasta ingresar monto válido
+while True:
+
+
+    try:
+
+
+        # Solicita monto inversión
+        monto = float(
+
+            input("Monto a invertir: ")
+
+        )
+
+
+        # Verifica monto positivo
+        if monto > 0:
+
+
+            # Sale del ciclo
+            break
+
+
+    except:
+
+
+        # Evita que el programa se detenga
+        pass
+
+
+    # Mensaje error
+    print("Ingresa un valor válido")
+
+
+# Obtiene nombre completo empresa seleccionada
+nombre_empresa = EMPRESAS_SECTOR[ticker_input]
+# Crea figura tamaño 12x5
+plt.figure(figsize=(12,5))
+# Grafica precio histórico
+plt.plot(
+
+    # Eje x = fechas
+    precios.index,
+
+    # Eje y = precios empresa
+    precios[nombre_empresa],
+
+    # Grosor línea
+    linewidth=2
+)
+
+
+# Título gráfica
+plt.title(
+
+    f"{nombre_empresa} - Precio Histórico"
+)
+
+
+# Nombre eje x
+plt.xlabel("Fecha")
+# Nombre eje y
+plt.ylabel("Precio USD")
+# Activa cuadrícula
+plt.grid(True)
+# Muestra gráfica
+plt.show()
+# Normaliza datos base 100
+precios_norm = precios / precios.iloc[0] * 100
+# Crea figura comparación sector
+plt.figure(figsize=(14,6))
+# Recorre empresas
+for col in precios_norm.columns:
+
+
+    # Resalta empresa seleccionada
+    if col == nombre_empresa:
+
+
+        # Grafica empresa principal
+        plt.plot(
+
+            precios_norm.index,
+
+            precios_norm[col],
+
+            linewidth=3,
+
+            label=col
+        )
+
+
+    else:
+
+
+        # Grafica demás empresas
+        plt.plot(
+
+            precios_norm.index,
+
+            precios_norm[col],
+
+            alpha=0.5
+        )
+
+
+# Título gráfica
+plt.title("Comparación Sector Petrolero")
+# Nombre eje x
+plt.xlabel("Fecha")
+# Nombre eje y
+plt.ylabel("Base 100")
+# Activa cuadrícula
+plt.grid(True)
+# Muestra leyenda
+plt.legend()
+# Muestra gráfica
+plt.show()
+# Crea DataFrame vacío
+df = pd.DataFrame()
+# Guarda precios históricos
+df["precio"] = precios[nombre_empresa]
+# Calcula variación porcentual
+df["variacion_pct"] = (
+
+    df["precio"].pct_change() * 100
+)
+# Crea variable rezagada 1
+df["lag1"] = (
+
+    df["variacion_pct"].shift(1)
+)
+# Crea variable rezagada 2
+df["lag2"] = (
+
+    df["variacion_pct"].shift(2)
+)
+# Calcula media móvil
+df["media_movil_3"] = (
+
+    df["variacion_pct"]
+
+    .rolling(3)
+
+    .mean()
+)
+# Elimina valores nulos
+df = df.dropna()
+# Selecciona variables predictoras
+X = df[[
+
+    "lag1",
+
+    "lag2",
+
+    "media_movil_3"
+]]
+# Variable objetivo
+y = df["variacion_pct"]
+# Divide datos entrenamiento y prueba
+X_train, X_test, y_train, y_test = train_test_split(
+
+    # Variables predictoras
+    X,
+
+    # Variable objetivo
+    y,
+
+    # 20% prueba
+    test_size=0.2,
+
+    # Mantiene orden temporal
+    shuffle=False
+)
+# Crea modelo Random Forest
+modelo = RandomForestRegressor(
+
+    # Número árboles
+    n_estimators=100,
+
+    # Profundidad máxima
+    max_depth=4,
+
+    # Reproducibilidad
+    random_state=42
+)
+# Entrena modelo
+modelo.fit(
+
+    # Variables entrenamiento
+    X_train,
+
+    # Objetivos entrenamiento
+    y_train
+)
+# Genera predicciones
+y_pred = modelo.predict(X_test)
+# Calcula error promedio
+mae = mean_absolute_error(
+
+    y_test,
+
+    y_pred
+)
+# Calcula coeficiente R2
+r2 = r2_score(
+
+    y_test,
+
+    y_pred
+)
+# Imprime MAE
+print("\nMAE:")
+print(mae)
+# Imprime R2
+print("\nR2:")
+print(r2)
+# Crea figura comparación real/predicción
+plt.figure(figsize=(12,5))
+# Grafica valores reales
+plt.plot(
+
+    y_test.values,
+
+    label="Real",
+
+    linewidth=2
+)
+# Grafica predicciones
+plt.plot(
+
+    y_pred,
+
+    label="Predicción",
+
+    linewidth=2
+)
+# Título gráfica
+plt.title(
+
+    "Real vs Predicción"
+)
+# Nombre eje x
+plt.xlabel("Periodo")
+# Nombre eje y
+plt.ylabel("Variación %")
+# Muestra leyenda
+plt.legend()
+# Activa cuadrícula
+plt.grid(True)
+# Muestra gráfica
+plt.show()
+# Obtiene último dato disponible
+ultimo_dato = X.iloc[-1:]
+# Predice siguiente periodo
+prediccion_futura = modelo.predict(
+
+    ultimo_dato
+
+)[0]
+# Imprime predicción futura
+print("\nPredicción próxima variación:")
+print(f"{prediccion_futura:.2f}%")
+# Convierte predicción a decimal
+rend = prediccion_futura / 100
+# Convierte volatilidad a decimal
+vol = empresa_sel.volatilidad / 100
+# Calcula escenario optimista
+rend_optimista = rend + vol
+# Calcula escenario pesimista
+rend_pesimista = rend - vol
+# Calcula valor esperado
+valor_esperado = monto * (1 + rend)
+# Calcula valor optimista
+valor_optimista = monto * (
+
+    1 + rend_optimista
+)
+# Calcula valor pesimista
+valor_pesimista = monto * (
+
+    1 + rend_pesimista
+)
+# Imprime escenario esperado
+print("\nEscenario esperado:")
+print(valor_esperado)
+# Imprime escenario optimista
+print("\nEscenario optimista:")
+print(valor_optimista)
+# Imprime escenario pesimista
+print("\nEscenario pesimista:")
+print(valor_pesimista)
+# Lista nombres escenarios
+escenarios = [
+
+    "Pesimista",
+
+    "Esperado",
+
+    "Optimista"
+]
+# Lista valores finales
+valores = [
+
+    valor_pesimista,
+
+    valor_esperado,
+
+    valor_optimista
+]
+# Crea figura gráfica barras
+plt.figure(figsize=(8,5))
+# Grafica barras escenarios
+plt.bar(
+
+    escenarios,
+
+    valores
+)
+# Título gráfica
+plt.title(
+
+    "Escenarios de Inversión"
+)
+# Nombre eje y
+plt.ylabel("Valor Final USD")
+# Activa cuadrícula eje y
+plt.grid(True, axis="y")
+# Muestra gráfica
+plt.show()
